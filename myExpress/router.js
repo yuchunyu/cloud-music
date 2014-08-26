@@ -1,6 +1,7 @@
 var querystring = require('querystring'),
 	url = require('url'),
-	fs = require('fs');
+	fs = require('fs'),
+	mmieTypeConf = require('./mmieType');
 
 function router(req, res){
 	this.req = req;
@@ -8,12 +9,27 @@ function router(req, res){
 	this.req.params = {};
 	this.req.query = {};
 	this.req.body = {};
-	
-	this.res.render = getRender;
+	// this.res.render = getRender;
 	this.res.send = getSend;
 	this.res.redirect = getRedirect;
-}
-
+	//getRender res.render('index', {user: 'ADMIN'});
+	this.res.render = function(view, option){
+		fs.readFile('views/' + view + '.html', 'utf8', function(err, data){
+			if(err){
+				console.log('view', view, 'is undefined');
+	           	res.end('view', view, 'is undefined');
+			}else{
+				res.writeHead(200, {'Content-Type':'text/html'});
+				res.end(data);
+			}
+		});
+	};
+	
+	//处理静态文件
+	if(url.parse(this.req.url).pathname.indexOf('.') >= 0){
+		dealWithStatic(url.parse(this.req.url).pathname,res);
+	}
+};
 //get
 router.prototype.get = function(path, callback){
 	var _this = this;
@@ -35,7 +51,6 @@ router.prototype.get = function(path, callback){
 		return;
 	}	
 };
-
 //post
 router.prototype.post = function(path, callback){
 	var _this = this;
@@ -63,9 +78,17 @@ router.prototype.post = function(path, callback){
 		return;
 	}
 };	
-
 //getRender res.render('index', {user: 'ADMIN'});
 function getRender(view, option){
+	fs.readFile('views/' + view + '.html', 'utf8', function(err, data){
+		if(err){
+			console.log('view', view, 'is undefined');
+            res.end('view', view, 'is undefined');
+		}else{
+			res.writeHead(200, {'Content-Type':'text/html'});
+			res.end(data);
+		}
+	});
 }
 //getRender res.send(user: 'ADMIN'});
 function getSend(option){
@@ -73,10 +96,7 @@ function getSend(option){
 //getRender res.redirect('index');
 function getRedirect(view){
 }
-
 module.exports = router;
-
-
 /*
  *	支持/testt/:asda/asd/:asd
  *	不支持/*
@@ -90,7 +110,7 @@ function isRouter(path, reqPath){
 /*
  *	处理冒号后面的参数到params
  */
- function setParams(obj, path, reqPath){
+function setParams(obj, path, reqPath){
  	if(path.indexOf(':') >= 0){
 		var arrPath = path.split('/');
 		var arrReqPath = reqPath.split('/');
@@ -104,3 +124,31 @@ function isRouter(path, reqPath){
 /*
  *	静态资源处理
  */
+function dealWithStatic(pathName, res){
+	var realPath = 'public' + pathName;
+	//判断是否存在
+	fs.exists(realPath, function(exists){
+		if(!exists){
+			res.writeHead(404, {'Content-Type':'text/plain'});
+			res.write('The request url ' + pathName + ' was not found on this server.');
+			console.log('The request url ' + pathName + ' was not found on this server.');
+			res.end();
+		}else{
+			var dealType = pathName.substring(pathName.lastIndexOf('.') + 1);
+			var mmieType = mmieTypeConf[dealType] || '';
+			//读取文件信息，并转化为二进制数据
+			fs.readFile(realPath,'binary',function(err,file){
+				if(err){
+					res.writeHead(500, {'Content-Type':'text/plain'});
+					console.log('[err]',err);
+					res.end(err);
+				}else{
+					res.writeHead(200, {'Content-Type':mmieType});
+					res.write(file,'binary');
+					res.end();
+				}
+			});
+		}
+	});
+};
+

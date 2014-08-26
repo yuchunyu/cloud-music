@@ -301,3 +301,39 @@ cloud-music
 	};
 
 ###6. 修改编写自己的express（完善返回到静态页面的方法）
+	
+	/*
+	 *	静态资源处理
+	 */
+	function dealWithStatic(pathName, res){
+		var realPath = 'public' + pathName;
+		//判断是否存在
+		fs.exists(realPath, function(exists){
+			if(!exists){
+				res.writeHead(404, {'Content-Type':'text/plain'});
+				res.write('The request url ' + pathName + ' was not found on this server.');
+				console.log('The request url ' + pathName + ' was not found on this server.');
+				res.end();
+			}else{
+				var dealType = pathName.substring(pathName.lastIndexOf('.') + 1);
+				var mmieType = mmieTypeConf[dealType] || '';
+				//读取文件信息，并转化为二进制数据
+				fs.readFile(realPath,'binary',function(err,file){
+					if(err){
+						res.writeHead(500, {'Content-Type':'text/plain'});
+						console.log('[err]',err);
+						res.end(err);
+					}else{
+						res.writeHead(200, {'Content-Type':mmieType});
+						res.write(file,'binary');
+						res.end();
+					}
+				});
+			}
+		});
+	};
+
+###7.后续
+1.处理静态资源的缓存问题
+2.实现ejs渲染
+3.实现res.send、res.redirect、res.render
