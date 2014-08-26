@@ -3,5 +3,5 @@ var express = require('./myExpress/express'),
 
 //启动端口
 app.listen(9217, function(){
-	console.log('启动服务端口 9217');
+	console.log('Start the service port 9217');
 });

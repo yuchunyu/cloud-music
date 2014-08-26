@@ -8,7 +8,7 @@ var http = require('http'),
  */
 var app = http.createServer();
 function express(){
-	console.log('创建服务器');
+	console.log('Create server');
 	return app;
 }
 	
@@ -16,6 +16,7 @@ function express(){
  * this is request log and router
  */
 app.on('request',function(req, res){
+	req.setEncoding('utf8'); //设置编码格式
 	var startDate = new Date();  //开始时间
 	var pathName = url.parse(req.url).pathname;
 
