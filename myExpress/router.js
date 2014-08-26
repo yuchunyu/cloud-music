@@ -1,4 +1,5 @@
-var querystring = require('querystring');
+var querystring = require('querystring'),
+	url = require('url');
 
 function router(req, res){
 	this.req = req;
@@ -6,22 +7,31 @@ function router(req, res){
 	this.req.params = {};
 	this.req.body = {};
 	this.res.render = getRender;
-	// this.res.send = getSend;
-	// this.res.redirect = getRedirect;
+	this.res.send = getSend;
+	this.res.redirect = getRedirect;
 }
 
 //get
 router.prototype.get = function(path, callback){
-	// console.log('&&&',path,this.req.url);
 	var _this = this;
-	if(isRouter(path, _this.req.url)){
-		// console.log('%%%',path);
+	var path = path + '/';
+	var reqPath = _this.req.url + '/';
+	if(isRouter(path, reqPath)){
+		/*处理冒号后面的参数到params*/
 		if(path.indexOf(':') >= 0){
-			_this.req.params[path.split(':')[1]] = _this.req.url.replace(path.split(':')[0],'');
+			var arrPath = path.split('/');
+			var arrReqPath = reqPath.split('/');
+			for (var i = 0; i < arrPath.length; i++) {
+				if(arrPath[i].indexOf(':') >= 0){
+					_this.req.params[arrPath[i].split(':')[1]] = arrReqPath[i];
+				}		
+			};
 		} 
+		/*处理body*/
 		callback(_this.req, _this.res);	
 	}	
 };
+
 //post
 router.prototype.post = function(){
 
@@ -29,26 +39,23 @@ router.prototype.post = function(){
 
 //getRender res.render('index', {user: 'ADMIN'});
 function getRender(view, option){
-	console.log('getRender:',view);
+}
+//getRender res.send(user: 'ADMIN'});
+function getSend(option){
+}
+//getRender res.redirect('index');
+function getRedirect(view){
 }
 
 module.exports = router;
 
 
 /*
- *	目前暂时制定支持一下部分
- *	/index
- *	/index/getByID
- *	/index/:id
+ *	支持/testt/:asda/asd/:asd
  */
 function isRouter(path, reqPath){
-	var path = path.split('/');
-	var reqPath = reqPath.split('/');
-	if(path == reqPath){
-		return true;
-	}
-	if(path[2] && reqPath[2] && path[1] == reqPath[1]){
-		return true;
-	}
-	return false;
+	var reg = /:\w+\//img;
+	path = path.replace(reg,'\\w+\\\/');
+	var regReqPath = new RegExp('^' + path + '$','img');
+	return regReqPath.test(reqPath);
 };

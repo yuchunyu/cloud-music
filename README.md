@@ -72,3 +72,129 @@ cloud-music
 	例如，'/index/index' ，表示获取index模块中的index方法
 
 ###4. 初步编写自己的express
+	
+	app.js
+	------
+	var express = require('./myExpress/express'),
+		app = express();
+	//启动端口
+	app.listen(9217, function(){
+		console.log('启动服务端口 9217');
+	});
+
+	express.js
+	------
+	var http = require('http'),
+		url = require('url'),
+		router = require('../lib/router.js');
+	/*
+	 * this is my express 在这里创建出来服务器
+	 */
+	var app = http.createServer();
+	function express(){
+		console.log('创建服务器');
+		return app;
+	}		
+	/*
+	 * this is request log and router 这里处理请求打印在控制台和分发到路由
+	 */
+	app.on('request',function(req, res){
+		var startDate = new Date();  //开始时间
+		var pathName = url.parse(req.url).pathname;
+		//过滤默认ico请求
+		if('/favicon.ico' != pathName){
+			/*
+			 * 进行路由处理
+			 */
+			router(req, res);
+			//信息处理
+			var endDate = new Date(); //结束时间
+			/*
+			 * 控制台打印格式和颜色
+			 * GET /images/loding.gif 304 1ms
+			 * POST /getIndex 200 43ms - 29b
+			 */
+			var colorStatus = '';
+	        switch( res.statusCode ){
+	            case 200 :
+	                colorStatus = '\x1B[32m';
+	                break;
+	            case 404 :
+	                colorStatus = '\x1B[31m';
+	                break;
+	            case 302 :
+	                colorStatus = '\x1B[36m';
+	                break;
+	            default:
+	            	colorStatus = '\x1B[33m';
+	                break;
+	        }
+			console.log('\x1B[90m', req.method, req.url, colorStatus, res.statusCode, '\x1B[90m', endDate - startDate + 'ms', '\x1B[39m');
+		}
+	});
+	exports = module.exports = express;
+
+	router.js
+	------
+	var querystring = require('querystring'),
+		url = require('url');
+	//实例化一个路由对象
+	function router(req, res){
+		this.req = req;
+		this.res = res;
+		this.req.params = {};
+		this.req.body = {};
+		this.res.render = getRender;
+		this.res.send = getSend;
+		this.res.redirect = getRedirect;
+	}
+	//处理get方式
+	router.prototype.get = function(path, callback){
+		var _this = this;
+		var path = path + '/';
+		var reqPath = _this.req.url + '/';
+		if(isRouter(path, reqPath)){
+			/*处理冒号后面的参数到params*/
+			if(path.indexOf(':') >= 0){
+				var arrPath = path.split('/');
+				var arrReqPath = reqPath.split('/');
+				for (var i = 0; i < arrPath.length; i++) {
+					if(arrPath[i].indexOf(':') >= 0){
+						_this.req.params[arrPath[i].split(':')[1]] = arrReqPath[i];
+					}		
+				};
+			} 
+			/*处理body*/
+			//还没写
+			callback(_this.req, _this.res);	
+		}	
+	};
+	//处理post方式
+	router.prototype.post = function(){
+	};	
+	//getRender res.render('index', {user: 'ADMIN'});
+	function getRender(view, option){
+	}
+	//getRender res.send(user: 'ADMIN'});
+	function getSend(option){
+	}
+	//getRender res.redirect('index');
+	function getRedirect(view){
+	}
+	module.exports = router;
+	/*
+	 *	处理路由转发条件
+	 *	支持以下格式
+	 *	/test
+	 *	/test/test
+	 *	/test/:name
+	 *	/test/:name/:pwd
+	 *	/test/:name/update/:pwd
+	 *	等常用格式
+	 */
+	function isRouter(path, reqPath){
+		var reg = /:\w+\//img;
+		path = path.replace(reg,'\\w+\\\/');
+		var regReqPath = new RegExp('^' + path + '$','img');
+		return regReqPath.test(reqPath);
+	};
